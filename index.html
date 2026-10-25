@@ -1,0 +1,40 @@
+nnpn<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#a7d985">
+  <title>Log in · Little Hamsters</title>
+  <link rel="stylesheet" href="styles/login.css">
+  <script src="scripts/login.js?v=2" defer></script>
+</head>
+<body>
+  <main class="login-shell">
+    <section class="hero-panel" aria-labelledby="appTitle">
+      <img src="hamsters/Picsart_25-12-10_11-11-08-730.png" class="hamster-hero" alt="Little Hamsters mascot">
+      <div>
+        <p class="eyebrow">Your friends, your groups</p>
+        <h1 class="title" id="appTitle">Little Hamsters</h1>
+        <p class="subtitle">A cozy meadow for your friends. Log in to find your groups and continue chatting.</p>
+      </div>
+    </section>
+
+    <section class="login-box auth-box" aria-labelledby="loginTitle">
+      <form class="auth-form" id="loginForm">
+        <p class="eyebrow">Welcome back</p>
+        <h2 id="loginTitle">Log in to your account</h2>
+        <label for="loginIdentifier">Username or mobile number</label>
+        <input type="text" id="loginIdentifier" autocomplete="username" placeholder="Username or 10-digit mobile" required>
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" minlength="6" maxlength="128" required>
+        <button type="submit" id="loginButton">Log in</button>
+        <p class="status-message" id="authStatus" role="status" aria-live="polite"></p>
+        <nav class="auth-links" aria-label="Account help">
+          <a class="auth-create-link" href="register.html">Create an account</a>
+          <a href="forgot-password.html">Forgot password?</a>
+        </nav>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

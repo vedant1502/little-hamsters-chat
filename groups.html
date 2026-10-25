@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Groups · Little Hamsters</title>
+  <link rel="stylesheet" href="styles/groups.css?v=2">
+</head>
+<body>
+  <main class="dashboard">
+    <header class="dashboard-header">
+      <div class="brand">
+        <img src="hamsters/Picsart_25-12-10_11-11-08-730.png" alt="" class="brand-avatar">
+        <div><p class="eyebrow">Little Hamsters</p><h1>Your groups</h1></div>
+      </div>
+      <div class="account-actions">
+        <span id="accountName"></span>
+        <button type="button" class="button-secondary" id="logoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <section class="welcome-card">
+      <p class="eyebrow">A place for your people</p>
+      <h2>Make a little space for your friends.</h2>
+      <p>Create a group and share its invite code with the people you want to join. Each group has its own conversation.</p>
+    </section>
+
+    <section class="hamster-picker" aria-labelledby="hamsterPickerTitle">
+      <div class="hamster-picker-heading">
+        <div>
+          <p class="eyebrow">Make it yours</p>
+          <h2 id="hamsterPickerTitle">Choose your hamster</h2>
+          <p>Your little buddy comes with you into every group. Pick a look; you can change it any time.</p>
+        </div>
+        <span class="picker-sparkle" aria-hidden="true">✦</span>
+      </div>
+      <div class="hamster-options" id="hamsterOptions" role="group" aria-label="Hamster designs">
+        <button class="hamster-option" type="button" data-design="classic" aria-pressed="false">
+          <span class="hamster-preview"><img src="hamsters/Picsart_25-12-10_11-11-08-730.png" data-design="classic" alt=""></span>
+          <span class="hamster-option-name">Classic</span><span class="hamster-option-note">Original buddy</span>
+        </button>
+        <button class="hamster-option" type="button" data-design="honey" aria-pressed="false">
+          <span class="hamster-preview"><img src="hamsters/Picsart_25-12-10_11-11-08-730.png" data-design="honey" alt=""></span>
+          <span class="hamster-option-name">Honey</span><span class="hamster-option-note">Golden and sunny</span>
+        </button>
+        <button class="hamster-option" type="button" data-design="cocoa" aria-pressed="false">
+          <span class="hamster-preview"><img src="hamsters/Picsart_25-12-10_11-11-08-730.png" data-design="cocoa" alt=""></span>
+          <span class="hamster-option-name">Cocoa</span><span class="hamster-option-note">A cozy brown</span>
+        </button>
+        <button class="hamster-option" type="button" data-design="mint" aria-pressed="false">
+          <span class="hamster-preview"><img src="hamsters/Picsart_25-12-10_11-11-08-730.png" data-design="mint" alt=""></span>
+          <span class="hamster-option-name">Mint</span><span class="hamster-option-note">Fresh from the garden</span>
+        </button>
+        <button class="hamster-option" type="button" data-design="lavender" aria-pressed="false">
+          <span class="hamster-preview"><img src="hamsters/Picsart_25-12-10_11-11-08-730.png" data-design="lavender" alt=""></span>
+          <span class="hamster-option-name">Lavender</span><span class="hamster-option-note">A little dreamy</span>
+        </button>
+        <button class="hamster-option" type="button" data-design="moonlight" aria-pressed="false">
+          <span class="hamster-preview"><img src="hamsters/Picsart_25-12-10_11-11-08-730.png" data-design="moonlight" alt=""></span>
+          <span class="hamster-option-name">Moonlight</span><span class="hamster-option-note">Soft and silvery</span>
+        </button>
+      </div>
+      <p class="form-status hamster-save-status" id="hamsterSaveStatus" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="group-actions" aria-label="Create or join a group">
+      <form class="action-card" id="createGroupForm">
+        <h2>Create a group</h2>
+        <p>Start a new private room and invite your friends.</p>
+        <label for="groupNameInput">Group name</label>
+        <input id="groupNameInput" name="name" placeholder="Weekend plans" maxlength="40" required>
+        <button type="submit" id="createGroupBtn">Create group</button>
+        <p class="form-status" id="createStatus" role="status" aria-live="polite"></p>
+      </form>
+
+      <form class="action-card" id="joinGroupForm">
+        <h2>Join a group</h2>
+        <p>Enter the five-digit code a friend shared with you.</p>
+        <label for="inviteCodeInput">Group invite code</label>
+        <input id="inviteCodeInput" name="inviteCode" placeholder="5-digit code" autocomplete="off" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" required>
+        <button type="submit" id="joinGroupBtn">Join group</button>
+        <p class="form-status" id="joinStatus" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="invite-card" id="inviteCard" hidden>
+      <div>
+        <p class="eyebrow">Share this with your friends</p>
+        <h2 id="inviteGroupName"></h2>
+        <p>Anyone with this code can join this group. Save it somewhere safe; it is only shown when the group is created.</p>
+        <code id="inviteCodeResult"></code>
+      </div>
+      <button type="button" class="button-secondary" id="copyInviteBtn">Copy code</button>
+    </section>
+
+    <section class="groups-section">
+      <div class="section-heading"><div><p class="eyebrow">Your conversations</p><h2>Groups you’ve joined</h2></div></div>
+      <div class="group-list" id="groupList" aria-live="polite"></div>
+      <p class="empty-state" id="emptyState" hidden>You haven’t joined a group yet. Create one or enter a friend’s invite code above.</p>
+      <p class="form-status" id="listStatus" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script src="scripts/groups.js?v=2" defer></script>
+</body>
+</html>
+

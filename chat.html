@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hamster Chat</title>
+  <link rel="stylesheet" href="styles/chat.css?v=7">
+</head>
+<body>
+  <main class="chat-shell">
+    <header class="chat-header">
+      <div class="identity">
+        <img src="hamsters/Picsart_25-12-10_11-11-08-730.png" class="hamster-avatar" alt="Little Hamsters mascot">
+        <div>
+          <h1 id="groupTitle">Little Hamsters</h1>
+          <p id="connectionStatus">Checking your account...</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a class="ghost-button" href="groups.html">Groups</a>
+        <button class="ghost-button" id="manageGroupBtn" type="button" hidden>Manage</button>
+        <button class="ghost-button leave-group-button" id="leaveGroupBtn" type="button" hidden>Leave group</button>
+        <button class="ghost-button" id="logoutBtn" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <section class="chat-stage" aria-label="Chat messages">
+      <div class="meadow-line"></div>
+      <div class="hamster-stage" id="hamsterStage" aria-label="Group members in the meadow">
+        <div class="hamster-crowd" id="hamsterCrowd" aria-label="Other group members"></div>
+      </div>
+      <div class="messages" id="messages"></div>
+    </section>
+
+    <form class="input-area" id="messageForm">
+      <input type="text" id="messageInput" placeholder="Type a message..." maxlength="1000" autocomplete="off">
+      <button type="submit" id="sendBtn">Send</button>
+    </form>
+
+    <dialog class="manage-dialog" id="manageDialog" aria-labelledby="manageTitle">
+      <section class="manage-panel">
+        <header class="manage-header">
+          <div><p class="eyebrow">Group creator tools</p><h2 id="manageTitle">Manage group</h2></div>
+          <button class="manage-close" id="closeManageBtn" type="button" aria-label="Close">×</button>
+        </header>
+        <p class="manage-description">Kick removes someone from this group. They can rejoin with the code. Ban blocks them from this group only.</p>
+        <section class="invite-management">
+          <div><h3>Group invite code</h3><p>Generate a new five-digit code. The current code will stop working.</p></div>
+          <button class="member-action" id="regenerateInviteBtn" type="button">Generate new code</button>
+          <div class="regenerated-code" id="regeneratedCodePanel" hidden>
+            <code id="regeneratedCode"></code>
+            <button class="member-action" id="copyRegeneratedCodeBtn" type="button">Copy</button>
+          </div>
+        </section>
+        <h3>Members</h3>
+        <div class="manage-list" id="manageMembers"></div>
+        <section class="banned-section" id="bannedSection" hidden>
+          <h3>Banned from this group</h3>
+          <div class="manage-list" id="manageBanned"></div>
+        </section>
+        <p class="manage-status" id="manageStatus" role="status" aria-live="polite"></p>
+        <section class="delete-group-section">
+          <div><h3>Delete this group</h3><p>Removes the group and its chat history for everyone.</p></div>
+          <button class="danger-button" id="deleteGroupBtn" type="button">Delete group</button>
+        </section>
+      </section>
+    </dialog>
+  </main>
+
+  <script src="scripts/chat.js?v=7" defer></script>
+</body>
+</html>
+

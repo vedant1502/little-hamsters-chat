@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#a7d985">
+  <title>Create account · Little Hamsters</title>
+  <link rel="stylesheet" href="styles/login.css">
+  <script src="scripts/register.js?v=2" defer></script>
+</head>
+<body>
+  <main class="login-shell">
+    <section class="hero-panel" aria-labelledby="appTitle">
+      <img src="hamsters/Picsart_25-12-10_11-11-08-730.png" class="hamster-hero" alt="Little Hamsters mascot">
+      <div>
+        <p class="eyebrow">Make yourself at home</p>
+        <h1 class="title" id="appTitle">Join the meadow</h1>
+        <p class="subtitle">Create your account, then start a group or join your friends with their five-digit code.</p>
+      </div>
+    </section>
+
+    <section class="login-box auth-box" aria-labelledby="registerTitle">
+      <form class="auth-form" id="registerForm">
+        <p class="eyebrow">New to Little Hamsters?</p>
+        <h2 id="registerTitle">Create your account</h2>
+        <label for="registerUsername">Username</label>
+        <input type="text" id="registerUsername" autocomplete="username" placeholder="Choose a username" maxlength="24" required>
+        <label for="registerPhone">Mobile number</label>
+        <input type="tel" id="registerPhone" autocomplete="tel-national" inputmode="numeric" placeholder="9876543210" maxlength="10" pattern="[6-9][0-9]{9}" required>
+        <p class="field-hint">Enter your 10-digit Indian mobile number. Each number can only be registered once.</p>
+        <label for="registerPassword">Password</label>
+        <input type="password" id="registerPassword" autocomplete="new-password" minlength="6" maxlength="128" placeholder="At least 6 characters" required>
+        <label for="registerQuestion">Security question</label>
+        <select id="registerQuestion" required>
+          <option value="" selected disabled>Choose a question</option>
+          <option value="first-pet">What was the name of your first pet?</option>
+          <option value="birth-city">In what city were you born?</option>
+          <option value="first-school">What was the name of your first school?</option>
+          <option value="childhood-nickname">What was your childhood nickname?</option>
+          <option value="childhood-friend">What was the name of a childhood friend?</option>
+        </select>
+        <label for="registerAnswer">Your answer</label>
+        <input type="text" id="registerAnswer" autocomplete="off" maxlength="100" required>
+        <button type="submit" id="registerButton">Create account</button>
+        <p class="status-message" id="registerStatus" role="status" aria-live="polite"></p>
+        <nav class="auth-links single-link" aria-label="Account navigation">
+          <a href="index.html">Already have an account? Log in</a>
+        </nav>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
