@@ -3,10 +3,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 const { promisify } = require("node:util");
+const { Pool } = require("pg");
 
 const PORT = Number(process.env.PORT) || 3000;
 const ROOT = __dirname;
 const DATA_FILE = path.resolve(process.env.APP_DATA_PATH || path.join(ROOT, "data", "app.json"));
+const DATABASE_URL = String(process.env.DATABASE_URL || "").trim();
+const pool = DATABASE_URL ? new Pool({ connectionString: DATABASE_URL, ssl: true, max: 2, connectionTimeoutMillis: 10000, idleTimeoutMillis: 30000 }) : null;
 const MAX_MESSAGES = 500;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const PASSWORD_MIN_LENGTH = 6;
@@ -14,6 +17,8 @@ const SECURITY_QUESTIONS = new Set(["first-pet", "birth-city", "first-school", "
 const HAMSTER_DESIGNS = new Set(["classic", "honey", "cocoa", "mint", "lavender", "moonlight"]);
 const scrypt = promisify(crypto.scrypt);
 const clients = new Set();
+let appStore = null;
+let databaseWriteQueue = Promise.resolve();
 const typingTimers = new Map();
 const requestLimits = new Map();
 const RATE_WINDOW_MS = 15 * 60 * 1000;
@@ -29,13 +34,12 @@ const mimeTypes = {
   ".ico": "image/x-icon"
 };
 
-ensureStore();
-
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
 
     if (url.pathname === "/api/health" && req.method === "GET") {
+      if (pool) await pool.query("SELECT 1");
       return sendJson(res, 200, { ok: true });
     }
 
@@ -52,7 +56,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (url.pathname === "/api/logout" && req.method === "POST") {
-      return handleLogout(req, res);
+      return await handleLogout(req, res);
     }
 
     if (url.pathname === "/api/me" && req.method === "GET") {
@@ -87,8 +91,8 @@ const server = http.createServer(async (req, res) => {
     if (groupUtilityRoute && req.method === "POST") {
       const action = groupUtilityRoute[2].toLowerCase();
       return action === "leave"
-        ? handleLeaveGroup(req, res, groupUtilityRoute[1])
-        : handleRegenerateGroupCode(req, res, groupUtilityRoute[1]);
+        ? await handleLeaveGroup(req, res, groupUtilityRoute[1])
+        : await handleRegenerateGroupCode(req, res, groupUtilityRoute[1]);
     }
 
     const groupMembersRoute = url.pathname.match(/^\/api\/groups\/([0-9a-f-]+)\/members$/i);
@@ -108,7 +112,7 @@ const server = http.createServer(async (req, res) => {
 
     const groupDeleteRoute = url.pathname.match(/^\/api\/groups\/([0-9a-f-]+)$/i);
     if (groupDeleteRoute && req.method === "DELETE") {
-      return handleDeleteGroup(req, res, groupDeleteRoute[1]);
+      return await handleDeleteGroup(req, res, groupDeleteRoute[1]);
     }
 
     const groupMessagesRoute = url.pathname.match(/^\/api\/groups\/([0-9a-f-]+)\/messages$/i);
@@ -161,9 +165,15 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`Little Hamsters is running at http://localhost:${PORT}`);
-});
+initializeStore()
+  .then(() => server.listen(PORT, () => {
+    console.log(`Little Hamsters is running at http://localhost:${PORT}`);
+  }))
+  .catch(async (error) => {
+    console.error("Could not initialize app storage:", error);
+    if (pool) await pool.end();
+    process.exitCode = 1;
+  });
 
 async function handleRegister(req, res) {
   const body = await readBody(req);
@@ -212,7 +222,7 @@ async function handleRegister(req, res) {
   }
   latestStore.users.push(user);
   const token = createSession(latestStore, user.id);
-  writeStore(latestStore);
+  await writeStore(latestStore);
   setSessionCookie(res, token, req);
   return sendJson(res, 201, { user: publicUser(user) });
 }
@@ -237,7 +247,7 @@ async function handleLogin(req, res) {
 
   const latestStore = readStore();
   const token = createSession(latestStore, user.id);
-  writeStore(latestStore);
+  await writeStore(latestStore);
   setSessionCookie(res, token, req);
   return sendJson(res, 200, { user: publicUser(user) });
 }
@@ -275,7 +285,7 @@ async function handlePasswordReset(req, res) {
   for (const [sessionKey, session] of Object.entries(store.sessions)) {
     if (session.userId === user.id) delete store.sessions[sessionKey];
   }
-  writeStore(store);
+  await writeStore(store);
   for (const client of clients) {
     if (client.userId === user.id) {
       clients.delete(client);
@@ -295,7 +305,7 @@ async function handleUpdateHamster(req, res) {
   const user = store.users.find((item) => item.id === authenticatedUser.id);
   if (!user) return sendJson(res, 401, { error: "Please sign in." });
   user.hamsterDesign = hamsterDesign;
-  writeStore(store);
+  await writeStore(store);
   const activeGroups = new Set();
   for (const client of clients) {
     if (client.userId !== user.id) continue;
@@ -326,7 +336,7 @@ async function handleCreateGroup(req, res) {
   };
   const store = readStore();
   store.groups.push(group);
-  writeStore(store);
+  await writeStore(store);
   return sendJson(res, 201, { group: publicGroup(group, user.id), inviteCode: invite.code });
 }
 
@@ -355,7 +365,7 @@ async function handleJoinGroup(req, res) {
   if (group.bannedUserIds.includes(user.id)) return sendJson(res, 403, { error: "You are banned from this group." });
   if (!group.memberIds.includes(user.id)) {
     group.memberIds.push(user.id);
-    writeStore(store);
+    await writeStore(store);
   }
   return sendJson(res, 200, { group: publicGroup(group, user.id) });
 }
@@ -394,7 +404,7 @@ async function handleGroupMemberAction(req, res, groupId, action) {
   if (action === "unban") {
     if (!group.bannedUserIds.includes(targetUserId)) return sendJson(res, 404, { error: "Banned member not found." });
     group.bannedUserIds = group.bannedUserIds.filter((id) => id !== targetUserId);
-    writeStore(store);
+    await writeStore(store);
     return sendJson(res, 200, { ok: true });
   }
 
@@ -403,12 +413,12 @@ async function handleGroupMemberAction(req, res, groupId, action) {
   }
   group.memberIds = group.memberIds.filter((id) => id !== targetUserId);
   if (action === "ban" && !group.bannedUserIds.includes(targetUserId)) group.bannedUserIds.push(targetUserId);
-  writeStore(store);
+  await writeStore(store);
   closeGroupConnections(groupId, targetUserId, action);
   return sendJson(res, 200, { ok: true });
 }
 
-function handleDeleteGroup(req, res, groupId) {
+async function handleDeleteGroup(req, res, groupId) {
   const user = getAuthenticatedUser(req);
   if (!user) return sendJson(res, 401, { error: "Please sign in." });
   const store = readStore();
@@ -419,12 +429,12 @@ function handleDeleteGroup(req, res, groupId) {
   store.groups = store.groups.filter((item) => item.id !== groupId);
   store.messages = store.messages.filter((message) => message.groupId !== groupId);
   for (const member of store.users) member.hiddenMessageIds = (member.hiddenMessageIds || []).filter((id) => !deletedMessageIds.has(id));
-  writeStore(store);
+  await writeStore(store);
   closeGroupConnections(groupId, null, "group-deleted");
   return sendJson(res, 200, { ok: true });
 }
 
-function handleRegenerateGroupCode(req, res, groupId) {
+async function handleRegenerateGroupCode(req, res, groupId) {
   const user = getAuthenticatedUser(req);
   if (!user) return sendJson(res, 401, { error: "Please sign in." });
   const store = readStore();
@@ -434,11 +444,11 @@ function handleRegenerateGroupCode(req, res, groupId) {
   const invite = generateGroupInvite(store);
   if (!invite) return sendJson(res, 503, { error: "Could not create a unique group code. Please try again." });
   group.inviteCodeHash = invite.hash;
-  writeStore(store);
+  await writeStore(store);
   return sendJson(res, 200, { inviteCode: invite.code });
 }
 
-function handleLeaveGroup(req, res, groupId) {
+async function handleLeaveGroup(req, res, groupId) {
   const user = getAuthenticatedUser(req);
   if (!user) return sendJson(res, 401, { error: "Please sign in." });
   const store = readStore();
@@ -446,7 +456,7 @@ function handleLeaveGroup(req, res, groupId) {
   if (!group || !group.memberIds.includes(user.id)) return sendJson(res, 404, { error: "Group not found." });
   if (group.createdBy === user.id) return sendJson(res, 400, { error: "The creator cannot leave. Delete the group if it should close." });
   group.memberIds = group.memberIds.filter((id) => id !== user.id);
-  writeStore(store);
+  await writeStore(store);
   closeGroupConnections(groupId, user.id, "left");
   return sendJson(res, 200, { ok: true });
 }
@@ -467,7 +477,7 @@ async function handleDeleteMessage(req, res, groupId, messageId) {
     if (!member) return sendJson(res, 401, { error: "Please sign in." });
     member.hiddenMessageIds ||= [];
     if (!member.hiddenMessageIds.includes(messageId)) member.hiddenMessageIds.push(messageId);
-    writeStore(store);
+    await writeStore(store);
     broadcastToUser("message-hidden", { messageId }, groupId, user.id);
     return sendJson(res, 200, { ok: true });
   }
@@ -476,7 +486,7 @@ async function handleDeleteMessage(req, res, groupId, messageId) {
   if (message.userId !== user.id) return sendJson(res, 403, { error: "You can only delete your own message for everyone." });
   store.messages = store.messages.filter((item) => item.id !== messageId);
   for (const member of store.users) member.hiddenMessageIds = (member.hiddenMessageIds || []).filter((id) => id !== messageId);
-  writeStore(store);
+  await writeStore(store);
   broadcast("message-deleted", { messageId }, groupId);
   return sendJson(res, 200, { ok: true });
 }
@@ -490,13 +500,13 @@ function closeGroupConnections(groupId, userId, reason) {
   }
 }
 
-function handleLogout(req, res) {
+async function handleLogout(req, res) {
   const token = getSessionToken(req);
   if (token) {
     const store = readStore();
     const sessionKey = hashToken(token);
     delete store.sessions[sessionKey];
-    writeStore(store);
+    await writeStore(store);
     for (const client of clients) {
       if (client.sessionKey === sessionKey) {
         clients.delete(client);
@@ -533,7 +543,7 @@ async function handleMessage(req, res, groupId) {
   store.messages.push(message);
   const groupMessages = store.messages.filter((item) => item.groupId === group.id).slice(-MAX_MESSAGES);
   store.messages = store.messages.filter((item) => item.groupId !== group.id).concat(groupMessages);
-  writeStore(store);
+  await writeStore(store);
   broadcast("message", message, group.id);
   return sendJson(res, 201, { message });
 }
@@ -669,8 +679,39 @@ function readBody(req) {
   });
 }
 
+async function initializeStore() {
+  if (!pool && process.env.NODE_ENV === "production") {
+    throw new Error("DATABASE_URL is required in production so chat data is stored durably.");
+  }
+  if (pool) {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS public.little_hamsters_state (
+        id smallint PRIMARY KEY CHECK (id = 1),
+        state jsonb NOT NULL,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await pool.query("ALTER TABLE public.little_hamsters_state ENABLE ROW LEVEL SECURITY");
+    await pool.query("REVOKE ALL ON TABLE public.little_hamsters_state FROM PUBLIC, anon, authenticated, service_role");
+    await pool.query(
+      "INSERT INTO public.little_hamsters_state (id, state) VALUES (1, $1::jsonb) ON CONFLICT (id) DO NOTHING",
+      [JSON.stringify(emptyStore())]
+    );
+    const result = await pool.query("SELECT state FROM public.little_hamsters_state WHERE id = 1");
+    appStore = normalizeStore(result.rows[0].state);
+    return;
+  }
+
+  ensureStore();
+  appStore = normalizeStore(JSON.parse(fs.readFileSync(DATA_FILE, "utf8")));
+}
+
 function readStore() {
-  const store = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+  if (!appStore) throw new Error("App storage has not been initialized.");
+  return appStore;
+}
+
+function normalizeStore(store) {
   store.users ||= [];
   for (const user of store.users) {
     user.hiddenMessageIds ||= [];
@@ -683,10 +724,25 @@ function readStore() {
   return store;
 }
 
-function writeStore(store) {
+async function writeStore(store) {
+  appStore = normalizeStore(store);
+  if (pool) {
+    const snapshot = JSON.stringify(appStore);
+    databaseWriteQueue = databaseWriteQueue.catch(() => {}).then(() => pool.query(
+      "UPDATE public.little_hamsters_state SET state = $1::jsonb, updated_at = now() WHERE id = 1",
+      [snapshot]
+    ));
+    await databaseWriteQueue;
+    return;
+  }
+
   const tempFile = `${DATA_FILE}.${process.pid}.tmp`;
-  fs.writeFileSync(tempFile, `${JSON.stringify(store, null, 2)}\n`, { mode: 0o600 });
+  fs.writeFileSync(tempFile, `${JSON.stringify(appStore, null, 2)}\n`, { mode: 0o600 });
   fs.renameSync(tempFile, DATA_FILE);
+}
+
+function emptyStore() {
+  return { users: [], sessions: {}, messages: [], groups: [] };
 }
 
 function ensureStore() {

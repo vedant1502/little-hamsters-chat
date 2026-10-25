@@ -8,6 +8,10 @@
   },
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "import:local-data": "node scripts/import-local-data.js"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
   }
 }

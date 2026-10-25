@@ -4,17 +4,19 @@ A small group chat app with accounts, private groups, and live messages. Create 
 
 ## Run locally
 
-Requires Node.js 20.13 or newer. No package installation is needed.
+Requires Node.js 20.13 or newer. Install dependencies with `npm ci`, then run `npm run dev`. The dev server restarts automatically when server code changes; refresh the browser to see HTML, CSS, and browser JavaScript updates. Run `npm start` for a normal local run.
 
-Run `npm run dev` while developing. It restarts the backend automatically when server code changes. HTML, CSS, and browser-side JavaScript changes are served from disk; refresh the browser to see those updates. Use `npm start` for a normal run. The landing page is for logging in; **Create an account** and **Forgot password?** open their own pages. Register with a username, 10-digit Indian mobile number, password, and a security question and answer. Usernames and mobile numbers must be unique. You can reset your password with your username or mobile number and the saved security question and answer. After logging in, choose one of six hamster looks on the groups page; your saved look appears in each group chat. Open **Create a group** and share its generated five-digit code. Friends register, then enter the code under **Join a group**. Each group has its own conversation and membership.
+Without `DATABASE_URL`, local development continues to use `data/app.json`. When `DATABASE_URL` is set, the app stores its data in Supabase instead. The landing page is for logging in; **Create an account** and **Forgot password?** open their own pages. Register with a username, 10-digit Indian mobile number, password, and security question and answer. Usernames and mobile numbers must be unique. After logging in, choose one of six hamster looks, create a group, and share its five-digit code with friends. Chat members see live messages, typing indicators, and their hamsters in the meadow.
 
-The server reads the port from `PORT` and stores accounts, sessions, and chat history in `data/app.json` by default. Set `APP_DATA_PATH` to use a different writable file path. Chat members also see a live typing indicator while another member is composing a message.
+## Deploy to Render and Supabase
 
-## Deploy
+1. Create a Supabase project. Choose a region close to your friends; Singapore is a good starting point for India.
+2. In Supabase, open **Connect**, choose **Session pooler**, and copy its connection string. Use the session pooler for an IPv4-only host; Supabase documents it as available over IPv4 on every plan. The app enforces TLS for PostgreSQL connections. Keep this URL private; it contains your database password. [Supabase connection guidance](https://supabase.com/docs/guides/database/connecting-to-postgres)
+3. If you want to keep existing local accounts, groups, and messages, import `data/app.json` before the hosted app writes new data. In PowerShell, set `$env:DATABASE_URL` to the Supabase connection string and run `npm run import:local-data`. The importer refuses to overwrite a database that already has data. Existing users will need to sign in again on the deployed domain.
+4. Push the project to GitHub, then create a Render **Blueprint** from that repository. The included `render.yaml` configures a free Node web service, `npm ci`, `npm start`, and the `/api/health` check. Render will ask for `DATABASE_URL`; paste the Supabase session-pooler URL there. The app creates its private database table on first startup, so no manual SQL setup is needed.
+5. Once the Render deploy is live, open its `onrender.com` URL and share it with friends. They can register and join your group with its five-digit code.
 
-Deploy this folder as a Node.js web service, use `npm start` as the start command, and make sure the host provides Node.js 20.13 or newer. The server listens on the host-provided `PORT`; `/api/health` is available for health checks.
-
-Attach persistent storage and set `APP_DATA_PATH` to a file on that disk so accounts and messages survive redeploys and restarts. For example, a host disk mounted at `/var/data` can use `/var/data/app.json`. The default project directory may be temporary on hosted platforms. This app writes to a single JSON file, so use one server instance; multiple instances or serverless hosting need a shared database instead.
+The app requires one server instance because live presence and typing events use its in-memory event connections. Render’s free service can sleep after 15 minutes without inbound traffic and may take about a minute to wake. Its local filesystem is temporary, which is why production requires Supabase. [Render free-service limits](https://render.com/docs/free) Supabase Free provides 500 MB of database storage and may pause a project after a week of low activity. [Supabase Free plan](https://supabase.com/pricing) [Supabase pausing policy](https://supabase.com/docs/guides/platform/free-project-pausing)
 
 ## Before sharing the deployed link
 
