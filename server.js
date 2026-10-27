@@ -4,12 +4,13 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const { promisify } = require("node:util");
 const { Pool } = require("pg");
+const { getDatabaseSslConfig } = require("./lib/database-ssl");
 
 const PORT = Number(process.env.PORT) || 3000;
 const ROOT = __dirname;
 const DATA_FILE = path.resolve(process.env.APP_DATA_PATH || path.join(ROOT, "data", "app.json"));
 const DATABASE_URL = String(process.env.DATABASE_URL || "").trim();
-const pool = DATABASE_URL ? new Pool({ connectionString: DATABASE_URL, ssl: true, max: 2, connectionTimeoutMillis: 10000, idleTimeoutMillis: 30000 }) : null;
+const pool = DATABASE_URL ? new Pool({ connectionString: DATABASE_URL, ssl: getDatabaseSslConfig(), max: 2, connectionTimeoutMillis: 10000, idleTimeoutMillis: 30000 }) : null;
 const MAX_MESSAGES = 500;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const PASSWORD_MIN_LENGTH = 6;

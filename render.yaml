@@ -11,5 +11,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: DATABASE_CA_CERT_PATH
+        value: /etc/secrets/supabase-ca.crt
       - key: DATABASE_URL
         sync: false

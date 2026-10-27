@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { Pool } = require("pg");
+const { getDatabaseSslConfig } = require("../lib/database-ssl");
 
 const databaseUrl = String(process.env.DATABASE_URL || "").trim();
 const dataFile = path.resolve(process.env.APP_DATA_PATH || path.join(__dirname, "..", "data", "app.json"));
@@ -30,7 +31,7 @@ async function importLocalData() {
   }
   for (const group of state.groups) group.bannedUserIds ||= [];
 
-  const pool = new Pool({ connectionString: databaseUrl, ssl: true, max: 1, connectionTimeoutMillis: 10000 });
+  const pool = new Pool({ connectionString: databaseUrl, ssl: getDatabaseSslConfig(), max: 1, connectionTimeoutMillis: 10000 });
   let client;
   try {
     client = await pool.connect();
